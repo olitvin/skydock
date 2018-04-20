@@ -66,7 +66,7 @@ func (r *pluginRuntime) createService(container *docker.Container) (*msg.Service
 
 func newRuntime(file string) (*pluginRuntime, error) {
 	runtime := otto.New()
-	log.Logf(log.INFO, "loading plugins from %s", file)
+	log.Printf(log.INFO, "loading plugins from %s", file)
 
 	content, err := ioutil.ReadFile(file)
 	if err != nil {

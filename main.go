@@ -104,19 +104,19 @@ func heartbeat(uuid string) {
 	for _ = range time.Tick(time.Duration(beat) * time.Second) {
 		if errorCount > 10 {
 			// if we encountered more than 10 errors just quit
-			log.Logf(log.ERROR, "aborting heartbeat for %s after 10 errors", uuid)
+			log.Printf(log.ERROR, "aborting heartbeat for %s after 10 errors", uuid)
 			return
 		}
 
 		// don't fill logs if we have a low beat
 		// may need to do something better here
 		if beat >= 30 {
-			log.Logf(log.INFO, "updating ttl for %s", uuid)
+			log.Printf(log.INFO, "updating ttl for %s", uuid)
 		}
 
 		if err := updateService(uuid, ttl); err != nil {
 			errorCount++
-			log.Logf(log.ERROR, "%s", err)
+			log.Printf(log.ERROR, "%s", err)
 			break
 		}
 	}
@@ -135,7 +135,7 @@ func restoreContainers() error {
 		uuid := utils.Truncate(cnt.Id)
 		if container, err = dockerClient.FetchContainer(uuid, cnt.Image); err != nil {
 			if err != docker.ErrImageNotTagged {
-				log.Logf(log.ERROR, "failed to fetch %s on restore: %s", cnt.Id, err)
+				log.Printf(log.ERROR, "failed to fetch %s on restore: %s", cnt.Id, err)
 			}
 			continue
 		}
@@ -147,7 +147,7 @@ func restoreContainers() error {
 			fatal(err)
 		}
 		if err := sendService(uuid, service); err != nil {
-			log.Logf(log.ERROR, "failed to send %s to skydns on restore: %s", uuid, err)
+			log.Printf(log.ERROR, "failed to send %s to skydns on restore: %s", uuid, err)
 		}
 	}
 	return nil
@@ -155,13 +155,13 @@ func restoreContainers() error {
 
 // sendService sends the uuid and service data to skydns
 func sendService(uuid string, service *msg.Service) error {
-	log.Logf(log.INFO, "adding %s (%s) to skydns", uuid, service.Name)
+	log.Printf(log.INFO, "adding %s (%s) to skydns", uuid, service.Name)
 	if err := skydns.Add(uuid, service); err != nil {
 		// ignore erros for conflicting uuids and start the heartbeat again
 		if err != client.ErrConflictingUUID {
 			return err
 		}
-		log.Logf(log.INFO, "service already exists for %s. Resetting ttl.", uuid)
+		log.Printf(log.INFO, "service already exists for %s. Resetting ttl.", uuid)
 		updateService(uuid, ttl)
 	}
 	go heartbeat(uuid)
@@ -169,7 +169,7 @@ func sendService(uuid string, service *msg.Service) error {
 }
 
 func removeService(uuid string) error {
-	log.Logf(log.INFO, "removing %s from skydns", uuid)
+	log.Printf(log.INFO, "removing %s from skydns", uuid)
 	return skydns.Delete(uuid)
 }
 
@@ -203,17 +203,17 @@ func eventHandler(c chan *docker.Event, group *sync.WaitGroup) {
 	defer group.Done()
 
 	for event := range c {
-		log.Logf(log.DEBUG, "received event (%s) %s %s", event.Status, event.ContainerId, event.Image)
+		log.Printf(log.DEBUG, "received event (%s) %s %s", event.Status, event.ContainerId, event.Image)
 		uuid := utils.Truncate(event.ContainerId)
 
 		switch event.Status {
 		case "die", "stop", "kill":
 			if err := removeService(uuid); err != nil {
-				log.Logf(log.ERROR, "error removing %s from skydns: %s", uuid, err)
+				log.Printf(log.ERROR, "error removing %s from skydns: %s", uuid, err)
 			}
 		case "start", "restart":
 			if err := addService(uuid, event.Image); err != nil {
-				log.Logf(log.ERROR, "error adding %s to skydns: %s", uuid, err)
+				log.Printf(log.ERROR, "error adding %s to skydns: %s", uuid, err)
 			}
 		}
 	}
@@ -242,30 +242,30 @@ func main() {
 	}
 
 	if dockerClient, err = docker.NewClient(pathToSocket); err != nil {
-		log.Logf(log.FATAL, "error connecting to docker: %s", err)
+		log.Printf(log.FATAL, "error connecting to docker: %s", err)
 		fatal(err)
 	}
 
 	if skydnsContainerName != "" {
 		container, err := dockerClient.FetchContainer(skydnsContainerName, "")
 		if err != nil {
-			log.Logf(log.FATAL, "error retrieving skydns container '%s': %s", skydnsContainerName, err)
+			log.Printf(log.FATAL, "error retrieving skydns container '%s': %s", skydnsContainerName, err)
 			fatal(err)
 		}
 
 		skydnsUrl = "http://" + container.NetworkSettings.IpAddress + ":8080"
 	}
 
-	log.Logf(log.INFO, "skydns URL: %s", skydnsUrl)
+	log.Printf(log.INFO, "skydns URL: %s", skydnsUrl)
 
 	if skydns, err = client.NewClient(skydnsUrl, secret, domain, "172.17.42.1:53"); err != nil {
-		log.Logf(log.FATAL, "error connecting to skydns: %s", err)
+		log.Printf(log.FATAL, "error connecting to skydns: %s", err)
 		fatal(err)
 	}
 
-	log.Logf(log.DEBUG, "starting restore of containers")
+	log.Printf(log.DEBUG, "starting restore of containers")
 	if err := restoreContainers(); err != nil {
-		log.Logf(log.FATAL, "error restoring containers: %s", err)
+		log.Printf(log.FATAL, "error restoring containers: %s", err)
 		fatal(err)
 	}
 
@@ -277,7 +277,7 @@ func main() {
 		go eventHandler(events, group)
 	}
 
-	log.Logf(log.DEBUG, "starting main process")
+	log.Printf(log.DEBUG, "starting main process")
 	group.Wait()
-	log.Logf(log.DEBUG, "stopping cleanly via EOF")
+	log.Printf(log.DEBUG, "stopping cleanly via EOF")
 }
