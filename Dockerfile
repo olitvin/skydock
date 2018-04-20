@@ -5,7 +5,7 @@ RUN apk upgrade --update musl \
        git \
     && rm -rf /var/cache/apk/*
 # go get to download all the deps
-RUN go get -v github.com/olitvin/skydock
+RUN go get -u -v github.com/olitvin/skydock
 
 ADD . /go/src/github.com/olitvin/skydock
 ADD plugins/ /plugins
