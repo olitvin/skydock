@@ -15,7 +15,6 @@ import (
 	"github.com/olitvin/log"
 	"github.com/olitvin/skydock/docker"
 	"github.com/olitvin/skydock/utils"
-	influxdb "github.com/influxdb/influxdb/client"
 	"github.com/skynetservices/skydns1/client"
 	"github.com/skynetservices/skydns1/msg"
 )
@@ -78,21 +77,7 @@ func setupLogger() error {
 		err    error
 	)
 
-	if host := os.Getenv("INFLUXDB_HOST"); host != "" {
-		config := &influxdb.ClientConfig{
-			Host:     host,
-			Database: os.Getenv("INFLUXDB_DATABASE"),
-			Username: os.Getenv("INFLUXDB_USER"),
-			Password: os.Getenv("INFLUXDB_PASSWORD"),
-		}
-
-		logger, err = log.NewInfluxdbLogger(fmt.Sprintf("%s.%s", environment, domain), "skydock", config)
-		if err != nil {
-			return err
-		}
-	} else {
-		logger = log.NewStandardLevelLogger("skydock")
-	}
+	logger = log.NewStandardLevelLogger("skydock")
 
 	if err := log.SetLogger(logger); err != nil {
 		return err
