@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/crosbymichael/skydock/docker"
+	"github.com/olitvin/skydock/docker"
 	"github.com/skynetservices/skydns1/client"
 	"github.com/skynetservices/skydns1/msg"
 )
@@ -79,7 +79,7 @@ func TestCreateService(t *testing.T) {
 	plugins = p
 
 	container := &docker.Container{
-		Image: "crosbymichael/redis:latest",
+		Image: "olitvin/redis:latest",
 		Name:  "redis1",
 		NetworkSettings: &docker.NetworkSettings{
 			IpAddress: "192.168.1.10",
@@ -123,7 +123,7 @@ func TestAddService(t *testing.T) {
 	dockerClient = &mockDocker{
 		containers: map[string]*docker.Container{
 			"1": {
-				Image: "crosbymichael/redis:latest",
+				Image: "olitvin/redis:latest",
 				Name:  "redis1",
 				NetworkSettings: &docker.NetworkSettings{
 					IpAddress: "192.168.1.10",
@@ -132,7 +132,7 @@ func TestAddService(t *testing.T) {
 		},
 	}
 
-	if err := addService("1", "crosbymichael/redis"); err != nil {
+	if err := addService("1", "olitvin/redis"); err != nil {
 		t.Fatal(err)
 	}
 
@@ -170,7 +170,7 @@ func TestRemoveService(t *testing.T) {
 	dockerClient = &mockDocker{
 		containers: map[string]*docker.Container{
 			"1": {
-				Image: "crosbymichael/redis:latest",
+				Image: "olitvin/redis:latest",
 				Name:  "redis1",
 				NetworkSettings: &docker.NetworkSettings{
 					IpAddress: "192.168.1.10",
@@ -179,7 +179,7 @@ func TestRemoveService(t *testing.T) {
 		},
 	}
 
-	if err := addService("1", "crosbymichael/redis"); err != nil {
+	if err := addService("1", "olitvin/redis"); err != nil {
 		t.Fatal(err)
 	}
 
@@ -214,7 +214,7 @@ func TestEventHandler(t *testing.T) {
 
 	skydns = &mockSkydns{make(map[string]*msg.Service)}
 	container := &docker.Container{
-		Image: "crosbymichael/redis:latest",
+		Image: "olitvin/redis:latest",
 		Name:  "redis1",
 		NetworkSettings: &docker.NetworkSettings{
 			IpAddress: "192.168.1.10",
@@ -233,7 +233,7 @@ func TestEventHandler(t *testing.T) {
 
 	events <- &docker.Event{
 		Status:      "start",
-		Image:       "crosbymichael/redis",
+		Image:       "olitvin/redis",
 		ContainerId: "3",
 	}
 
@@ -260,7 +260,7 @@ func TestEnvironmentPlugin(t *testing.T) {
 	plugins = p
 
 	container := &docker.Container{
-		Image: "crosbymichael/redis:latest",
+		Image: "olitvin/redis:latest",
 		Name:  "redis1",
 		NetworkSettings: &docker.NetworkSettings{
 			IpAddress: "192.168.1.10",
@@ -309,7 +309,7 @@ func TestGetMappedPorts(t *testing.T) {
 
 	skydns = &mockSkydns{make(map[string]*msg.Service)}
 	container := &docker.Container{
-		Image: "crosbymichael/redis:latest",
+		Image: "olitvin/redis:latest",
 		Name:  "redis1",
 		NetworkSettings: &docker.NetworkSettings{
 			IpAddress: "192.168.1.10",
@@ -338,7 +338,7 @@ func TestGetExposedPorts(t *testing.T) {
 
 	skydns = &mockSkydns{make(map[string]*msg.Service)}
 	container := &docker.Container{
-		Image: "crosbymichael/redis:latest",
+		Image: "olitvin/redis:latest",
 		Name:  "redis1",
 		NetworkSettings: &docker.NetworkSettings{
 			IpAddress: "192.168.1.10",

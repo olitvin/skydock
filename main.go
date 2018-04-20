@@ -12,9 +12,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/crosbymichael/log"
-	"github.com/crosbymichael/skydock/docker"
-	"github.com/crosbymichael/skydock/utils"
+	"github.com/olitvin/log"
+	"github.com/olitvin/skydock/docker"
+	"github.com/olitvin/skydock/utils"
 	influxdb "github.com/influxdb/influxdb/client"
 	"github.com/skynetservices/skydns1/client"
 	"github.com/skynetservices/skydns1/msg"

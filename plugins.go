@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"io/ioutil"
 
-	"github.com/crosbymichael/log"
-	"github.com/crosbymichael/skydock/docker"
-	"github.com/crosbymichael/skydock/utils"
+	"github.com/olitvin/log"
+	"github.com/olitvin/skydock/docker"
+	"github.com/olitvin/skydock/utils"
 	"github.com/robertkrimen/otto"
 	"github.com/skynetservices/skydns1/msg"
 )

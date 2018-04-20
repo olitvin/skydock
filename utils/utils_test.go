@@ -17,8 +17,8 @@ func TestTruncateName(t *testing.T) {
 
 func TestRemoveTag(t *testing.T) {
 	var (
-		name     = "crosbymichael/redis:latest"
-		expected = "crosbymichael/redis"
+		name     = "olitvin/redis:latest"
+		expected = "olitvin/redis"
 	)
 
 	if actual := RemoveTag(name); actual != expected {
@@ -28,8 +28,8 @@ func TestRemoveTag(t *testing.T) {
 
 func TestRemoveTagWithRegistry(t *testing.T) {
 	var (
-		name     = "registry:5000/crosbymichael/redis:latest"
-		expected = "registry:5000/crosbymichael/redis"
+		name     = "registry:5000/olitvin/redis:latest"
+		expected = "registry:5000/olitvin/redis"
 	)
 
 	if actual := RemoveTag(name); actual != expected {
@@ -39,8 +39,8 @@ func TestRemoveTagWithRegistry(t *testing.T) {
 
 func TestRemoveTagWithRegistryNoTag(t *testing.T) {
 	var (
-		name     = "registry:5000/crosbymichael/redis"
-		expected = "registry:5000/crosbymichael/redis"
+		name     = "registry:5000/olitvin/redis"
+		expected = "registry:5000/olitvin/redis"
 	)
 
 	if actual := RemoveTag(name); actual != expected {
@@ -50,7 +50,7 @@ func TestRemoveTagWithRegistryNoTag(t *testing.T) {
 
 func TestCleanImageName(t *testing.T) {
 	var (
-		name     = "crosbymichael/redis:latest"
+		name     = "olitvin/redis:latest"
 		expected = "redis"
 	)
 
@@ -61,7 +61,7 @@ func TestCleanImageName(t *testing.T) {
 
 func TestCleanImageNameWithRegistry(t *testing.T) {
 	var (
-		name     = "registry:5000/crosbymichael/redis:latest"
+		name     = "registry:5000/olitvin/redis:latest"
 		expected = "redis"
 	)
 
