@@ -9,13 +9,12 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
-	"log"
 	"os"
 	"sync"
 	"time"
 
-	slog "github.com/olitvin/log"
 	"github.com/olitvin/skydock/docker"
+	log "github.com/olitvin/skydock/slog"
 	"github.com/olitvin/skydock/utils"
 	"github.com/skynetservices/skydns1/client"
 	"github.com/skynetservices/skydns1/msg"
@@ -25,7 +24,7 @@ type Params struct {
 	PathToSocket        string
 	Domain              string
 	Environment         string
-	SkydnsUrl           string
+	SkydnsURL           string
 	SkydnsContainerName string
 	Secret              string
 	TTL                 int
@@ -44,9 +43,9 @@ var (
 	runningLock  = sync.Mutex{}
 )
 
-func init() {
+func initParams() {
 	flag.StringVar(&params.PathToSocket, "s", "/var/run/docker.sock", "path to the docker unix socket")
-	flag.StringVar(&params.SkydnsUrl, "skydns", "", "url to the skydns url")
+	flag.StringVar(&params.SkydnsURL, "skydns", "", "url to the skydns url")
 	flag.StringVar(&params.SkydnsContainerName, "name", "", "name of skydns container")
 	flag.StringVar(&params.Secret, "secret", "", "skydns secret")
 	flag.StringVar(&params.Domain, "domain", "", "same domain passed to skydns")
@@ -59,10 +58,10 @@ func init() {
 
 	b, err := json.Marshal(params)
 	if err != nil {
-		log.Panicln(err)
+		log.Panicf("%s", err)
 	}
 
-	log.Println("Start with params: ", string(b))
+	log.Println(log.INFO, "Start with params: ", string(b))
 }
 
 func validateSettings() {
@@ -70,12 +69,12 @@ func validateSettings() {
 		params.Beat = params.TTL - (params.TTL / 4)
 	}
 
-	if (params.SkydnsUrl != "") && (params.SkydnsContainerName != "") {
+	if (params.SkydnsURL != "") && (params.SkydnsContainerName != "") {
 		fatal(fmt.Errorf("specify 'name' or 'skydns', not both"))
 	}
 
-	if (params.SkydnsUrl == "") && (params.SkydnsContainerName == "") {
-		params.SkydnsUrl = "http://" + os.Getenv("SKYDNS_PORT_8080_TCP_ADDR") + ":8080"
+	if (params.SkydnsURL == "") && (params.SkydnsContainerName == "") {
+		params.SkydnsURL = "http://" + os.Getenv("SKYDNS_PORT_8080_TCP_ADDR") + ":8080"
 	}
 
 	if params.Domain == "" {
@@ -84,6 +83,9 @@ func validateSettings() {
 }
 
 func setupLogger() error {
+	log.SetSyslogHost("localhost")
+	log.Initialize()
+
 	return nil
 }
 
@@ -106,19 +108,19 @@ func heartbeat(uuid string) {
 	for _ = range time.Tick(time.Duration(params.Beat) * time.Second) {
 		if errorCount > 10 {
 			// if we encountered more than 10 errors just quit
-			slog.Printf(slog.ERROR, "aborting heartbeat for %s after 10 errors", uuid)
+			log.Printf(log.ERROR, "aborting heartbeat for %s after 10 errors", uuid)
 			return
 		}
 
 		// don't fill logs if we have a low params.Beat
 		// may need to do something better here
 		if params.Beat >= 30 {
-			slog.Printf(slog.INFO, "updating params.TTL for %s", uuid)
+			log.Printf(log.INFO, "updating params.TTL for %s", uuid)
 		}
 
 		if err := updateService(uuid, params.TTL); err != nil {
 			errorCount++
-			slog.Printf(slog.ERROR, "%s", err)
+			log.Printf(log.ERROR, "%s", err)
 			break
 		}
 	}
@@ -137,7 +139,7 @@ func restoreContainers() error {
 		uuid := utils.Truncate(cnt.Id)
 		if container, err = dockerClient.FetchContainer(uuid, cnt.Image); err != nil {
 			if err != docker.ErrImageNotTagged {
-				slog.Printf(slog.ERROR, "failed to fetch %s on restore: %s", cnt.Id, err)
+				log.Printf(log.ERROR, "failed to fetch %s on restore: %s", cnt.Id, err)
 			}
 			continue
 		}
@@ -149,7 +151,7 @@ func restoreContainers() error {
 			fatal(err)
 		}
 		if err := sendService(uuid, service); err != nil {
-			slog.Printf(slog.ERROR, "failed to send %s to skydns on restore: %s", uuid, err)
+			log.Printf(log.ERROR, "failed to send %s to skydns on restore: %s", uuid, err)
 		}
 	}
 	return nil
@@ -157,13 +159,13 @@ func restoreContainers() error {
 
 // sendService sends the uuid and service data to skydns
 func sendService(uuid string, service *msg.Service) error {
-	slog.Printf(slog.INFO, "adding %s (%s) to skydns", uuid, service.Name)
+	log.Printf(log.INFO, "adding %s (%s) to skydns", uuid, service.Name)
 	if err := skydns.Add(uuid, service); err != nil {
 		// ignore erros for conflicting uuids and start the heartbeat again
 		if err != client.ErrConflictingUUID {
 			return err
 		}
-		slog.Printf(slog.INFO, "service already exists for %s. Resetting params.TTL.", uuid)
+		log.Printf(log.INFO, "service already exists for %s. Resetting params.TTL.", uuid)
 		updateService(uuid, params.TTL)
 	}
 	go heartbeat(uuid)
@@ -171,7 +173,7 @@ func sendService(uuid string, service *msg.Service) error {
 }
 
 func removeService(uuid string) error {
-	slog.Printf(slog.INFO, "removing %s from skydns", uuid)
+	log.Printf(log.INFO, "removing %s from skydns", uuid)
 	return skydns.Delete(uuid)
 }
 
@@ -205,17 +207,17 @@ func eventHandler(c chan *docker.Event, group *sync.WaitGroup) {
 	defer group.Done()
 
 	for event := range c {
-		slog.Printf(slog.DEBUG, "received event (%s) %s %s", event.Status, event.ContainerId, event.Image)
+		log.Printf(log.DEBUG, "received event (%s) %s %s", event.Status, event.ContainerId, event.Image)
 		uuid := utils.Truncate(event.ContainerId)
 
 		switch event.Status {
 		case "die", "stop", "kill":
 			if err := removeService(uuid); err != nil {
-				slog.Printf(slog.ERROR, "error removing %s from skydns: %s", uuid, err)
+				log.Printf(log.ERROR, "error removing %s from skydns: %s", uuid, err)
 			}
 		case "start", "restart":
 			if err := addService(uuid, event.Image); err != nil {
-				slog.Printf(slog.ERROR, "error adding %s to skydns: %s", uuid, err)
+				log.Printf(log.ERROR, "error adding %s to skydns: %s", uuid, err)
 			}
 		}
 	}
@@ -228,10 +230,11 @@ func fatal(err error) {
 }
 
 func main() {
-	validateSettings()
 	if err := setupLogger(); err != nil {
 		fatal(err)
 	}
+	initParams()
+	validateSettings()
 
 	var (
 		err   error
@@ -244,30 +247,30 @@ func main() {
 	}
 
 	if dockerClient, err = docker.NewClient(params.PathToSocket); err != nil {
-		slog.Printf(slog.FATAL, "error connecting to docker: %s", err)
+		log.Printf(log.FATAL, "error connecting to docker: %s", err)
 		fatal(err)
 	}
 
 	if params.SkydnsContainerName != "" {
 		container, err := dockerClient.FetchContainer(params.SkydnsContainerName, "")
 		if err != nil {
-			slog.Printf(slog.FATAL, "error retrieving skydns container '%s': %s", params.SkydnsContainerName, err)
+			log.Printf(log.FATAL, "error retrieving skydns container '%s': %s", params.SkydnsContainerName, err)
 			fatal(err)
 		}
 
-		params.SkydnsUrl = "http://" + container.NetworkSettings.IpAddress + ":8080"
+		params.SkydnsURL = "http://" + container.NetworkSettings.IpAddress + ":8080"
 	}
 
-	slog.Printf(slog.INFO, "skydns URL: %s", params.SkydnsUrl)
+	log.Printf(log.INFO, "skydns URL: %s", params.SkydnsURL)
 
-	if skydns, err = client.NewClient(params.SkydnsUrl, params.Secret, params.Domain, "172.17.42.1:53"); err != nil {
-		slog.Printf(slog.FATAL, "error connecting to skydns: %s", err)
+	if skydns, err = client.NewClient(params.SkydnsURL, params.Secret, params.Domain, "172.17.42.1:53"); err != nil {
+		log.Printf(log.FATAL, "error connecting to skydns: %s", err)
 		fatal(err)
 	}
 
-	slog.Printf(slog.DEBUG, "starting restore of containers")
+	log.Printf(log.DEBUG, "starting restore of containers")
 	if err := restoreContainers(); err != nil {
-		slog.Printf(slog.FATAL, "error restoring containers: %s", err)
+		log.Printf(log.FATAL, "error restoring containers: %s", err)
 		fatal(err)
 	}
 
@@ -279,7 +282,7 @@ func main() {
 		go eventHandler(events, group)
 	}
 
-	slog.Printf(slog.DEBUG, "starting main process")
+	log.Printf(log.DEBUG, "starting main process")
 	group.Wait()
-	slog.Printf(slog.DEBUG, "stopping cleanly via EOF")
+	log.Printf(log.DEBUG, "stopping cleanly via EOF")
 }
