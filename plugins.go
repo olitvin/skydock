@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"io/ioutil"
 
-	"github.com/olitvin/log"
 	"github.com/olitvin/skydock/docker"
+	log "github.com/olitvin/skydock/slog"
 	"github.com/olitvin/skydock/utils"
 	"github.com/robertkrimen/otto"
 	"github.com/skynetservices/skydns1/msg"

@@ -8,5 +8,5 @@ install:
     - go get github.com/skynetservices/skydns1/client
     - go get github.com/olitvin/skydock/docker
     - go get github.com/olitvin/skydock/utils
-    - go get github.com/olitvin/log
+    - go get github.com/olitvin/skydock/slog
     - go get github.com/robertkrimen/otto
