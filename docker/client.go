@@ -12,7 +12,7 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/olitvin/log"
+	"olitvin/skydock/slog"
 	"github.com/olitvin/skydock/utils"
 )
 

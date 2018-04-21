@@ -252,6 +252,7 @@ func main() {
 	}
 
 	if params.SkydnsContainerName != "" {
+		log.Printf(log.INFO, "fetch skydns container: %s", params.SkydnsContainerName)
 		container, err := dockerClient.FetchContainer(params.SkydnsContainerName, "")
 		if err != nil {
 			log.Printf(log.FATAL, "error retrieving skydns container '%s': %s", params.SkydnsContainerName, err)

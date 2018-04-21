@@ -27,28 +27,28 @@ const (
 // Call Initialize after setting (or not setting) SyslogHost and SyslogPort when
 // they're read from configuration source.
 func Initialize() {
-	logger = log.New(os.Stdout, "skynet", log.LstdFlags|log.Lshortfile)
+	logger = log.New(os.Stdout, "skynet | ", log.LstdFlags|log.Lshortfile)
 }
 
 func Panic(messages ...interface{}) {
-	logger.Panic(fromMulti(messages))
+	logger.Panicln(fromMulti(messages))
 }
 
 func Panicf(format string, messages ...interface{}) {
 	m := fmt.Sprintf(format, messages...)
-	logger.Panic(m)
+	logger.Panicln(m)
 }
 
 func Fatal(messages ...interface{}) {
 	if minLevel <= FATAL {
-		logger.Fatal(fromMulti(messages))
+		logger.Fatalln(fromMulti(messages))
 	}
 }
 
 func Fatalf(format string, messages ...interface{}) {
 	if minLevel <= FATAL {
 		m := fmt.Sprintf(format, messages...)
-		logger.Fatal(m)
+		logger.Fatalln(m)
 	}
 }
 
