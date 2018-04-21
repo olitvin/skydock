@@ -6,6 +6,7 @@
 package main
 
 import (
+	"encoding/json"
 	"flag"
 	"fmt"
 	"log"
@@ -56,7 +57,12 @@ func init() {
 	flag.StringVar(&params.PluginFile, "plugins", "/plugins/default.js", "file containing javascript plugins (plugins.js)")
 	flag.Parse()
 
-	log.Println("Start with params: ", params)
+	b, err := json.Marshal(params)
+	if err != nil {
+		log.Panicln(err)
+	}
+
+	log.Println("Start with params: ", string(b))
 }
 
 func validateSettings() {
