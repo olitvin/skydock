@@ -208,6 +208,7 @@ func (d *dockerClient) GetEvents() chan *Event {
 				log.Printf(log.ERROR, "cannot decode json: %s", err)
 				continue
 			}
+
 			eventChan <- event
 		}
 		log.Printf(log.DEBUG, "closing event channel")

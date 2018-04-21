@@ -74,7 +74,7 @@ func validateSettings() {
 	}
 
 	if (params.SkydnsURL == "") && (params.SkydnsContainerName == "") {
-		params.SkydnsURL = "http://" + os.Getenv("SKYDNS_PORT_8080_TCP_ADDR") + ":8080"
+		params.SkydnsURL = "http://" + os.Getenv("SKYDNS_PORT_8080_TCP_ADDR") + ":5380"
 	}
 
 	if params.Domain == "" {
@@ -159,7 +159,7 @@ func restoreContainers() error {
 
 // sendService sends the uuid and service data to skydns
 func sendService(uuid string, service *msg.Service) error {
-	log.Printf(log.INFO, "adding %s (%s) to skydns", uuid, service.Name)
+	log.Println(log.INFO, fmt.Sprintf("adding %s (%s) to skydns", uuid, service.Name))
 	if err := skydns.Add(uuid, service); err != nil {
 		// ignore erros for conflicting uuids and start the heartbeat again
 		if err != client.ErrConflictingUUID {
@@ -168,6 +168,7 @@ func sendService(uuid string, service *msg.Service) error {
 		log.Printf(log.INFO, "service already exists for %s. Resetting params.TTL.", uuid)
 		updateService(uuid, params.TTL)
 	}
+	log.Println(log.INFO, fmt.Sprintf("added %s (%s) successfully", uuid, service.Name))
 	go heartbeat(uuid)
 	return nil
 }
@@ -179,6 +180,7 @@ func removeService(uuid string) error {
 
 func addService(uuid, image string) error {
 	container, err := dockerClient.FetchContainer(uuid, image)
+	log.Println(log.DEBUG, "container", container)
 	if err != nil {
 		if err != docker.ErrImageNotTagged {
 			return err
@@ -207,17 +209,18 @@ func eventHandler(c chan *docker.Event, group *sync.WaitGroup) {
 	defer group.Done()
 
 	for event := range c {
-		log.Printf(log.DEBUG, "received event (%s) %s %s", event.Status, event.ContainerId, event.Image)
+		log.Printf(log.DEBUG, "received event (%s)", toJson(event))
 		uuid := utils.Truncate(event.ContainerId)
 
 		switch event.Status {
 		case "die", "stop", "kill":
 			if err := removeService(uuid); err != nil {
-				log.Printf(log.ERROR, "error removing %s from skydns: %s", uuid, err)
+				log.Printf(log.ERROR, fmt.Sprintf("error removing %s from skydns: %s", uuid, err))
 			}
+			log.Printf(log.ERROR, fmt.Sprintf("removed %s from skydns", uuid))
 		case "start", "restart":
 			if err := addService(uuid, event.Image); err != nil {
-				log.Printf(log.ERROR, "error adding %s to skydns: %s", uuid, err)
+				log.Printf(log.ERROR, fmt.Sprintf("error adding %s to skydns: %s", uuid, err))
 			}
 		}
 	}
@@ -259,10 +262,10 @@ func main() {
 			fatal(err)
 		}
 
-		params.SkydnsURL = "http://" + container.NetworkSettings.IpAddress + ":8080"
+		params.SkydnsURL = "http://" + container.NetworkSettings.IpAddress + ":5380"
 	}
 
-	if skydns, err = client.NewClient(params.SkydnsURL, params.Secret, params.Domain, "172.0.0.11:53"); err != nil {
+	if skydns, err = client.NewClient(params.SkydnsURL, params.Secret, params.Domain, "skydns"); err != nil {
 		log.Printf(log.FATAL, "error connecting to skydns: %s", err)
 		fatal(err)
 	}
@@ -284,4 +287,12 @@ func main() {
 	log.Printf(log.DEBUG, "starting main process")
 	group.Wait()
 	log.Printf(log.DEBUG, "stopping cleanly via EOF")
+}
+
+func toJson(input interface{}) string {
+	b, e := json.Marshal(input)
+	if e != nil {
+		return ""
+	}
+	return string(b)
 }
