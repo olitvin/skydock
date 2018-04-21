@@ -8,6 +8,7 @@ package main
 import (
 	"flag"
 	"fmt"
+	"log"
 	"os"
 	"sync"
 	"time"
@@ -19,17 +20,21 @@ import (
 	"github.com/skynetservices/skydns1/msg"
 )
 
+type Params struct {
+	PathToSocket        string
+	Domain              string
+	Environment         string
+	SkydnsUrl           string
+	SkydnsContainerName string
+	Secret              string
+	TTL                 int
+	Beat                int
+	NumberOfHandlers    int
+	PluginFile          string
+}
+
 var (
-	pathToSocket        string
-	domain              string
-	environment         string
-	skydnsUrl           string
-	skydnsContainerName string
-	secret              string
-	ttl                 int
-	beat                int
-	numberOfHandlers    int
-	pluginFile          string
+	params Params
 
 	skydns       Skydns
 	dockerClient docker.Docker
@@ -39,34 +44,35 @@ var (
 )
 
 func init() {
-	flag.StringVar(&pathToSocket, "s", "/var/run/docker.sock", "path to the docker unix socket")
-	flag.StringVar(&skydnsUrl, "skydns", "", "url to the skydns url")
-	flag.StringVar(&skydnsContainerName, "name", "", "name of skydns container")
-	flag.StringVar(&secret, "secret", "", "skydns secret")
-	flag.StringVar(&domain, "domain", "", "same domain passed to skydns")
-	flag.StringVar(&environment, "environment", "dev", "environment name where service is running")
-	flag.IntVar(&ttl, "ttl", 60, "default ttl to use when registering a service")
-	flag.IntVar(&beat, "beat", 0, "heartbeat interval")
-	flag.IntVar(&numberOfHandlers, "workers", 3, "number of concurrent workers")
-	flag.StringVar(&pluginFile, "plugins", "/plugins/default.js", "file containing javascript plugins (plugins.js)")
-
+	flag.StringVar(&params.PathToSocket, "s", "/var/run/docker.sock", "path to the docker unix socket")
+	flag.StringVar(&params.SkydnsUrl, "skydns", "", "url to the skydns url")
+	flag.StringVar(&params.SkydnsContainerName, "name", "", "name of skydns container")
+	flag.StringVar(&params.Secret, "params.Secret", "", "skydns params.Secret")
+	flag.StringVar(&params.Domain, "domain", "", "same domain passed to skydns")
+	flag.StringVar(&params.Environment, "environment", "dev", "environment name where service is running")
+	flag.IntVar(&params.TTL, "params.TTL", 60, "default params.TTL to use when registering a service")
+	flag.IntVar(&params.Beat, "params.Beat", 0, "heartbeat interval")
+	flag.IntVar(&params.NumberOfHandlers, "workers", 3, "number of concurrent workers")
+	flag.StringVar(&params.PluginFile, "plugins", "/plugins/default.js", "file containing javascript plugins (plugins.js)")
 	flag.Parse()
+
+	log.Println("Start with params: ", params)
 }
 
 func validateSettings() {
-	if beat < 1 {
-		beat = ttl - (ttl / 4)
+	if params.Beat < 1 {
+		params.Beat = params.TTL - (params.TTL / 4)
 	}
 
-	if (skydnsUrl != "") && (skydnsContainerName != "") {
+	if (params.SkydnsUrl != "") && (params.SkydnsContainerName != "") {
 		fatal(fmt.Errorf("specify 'name' or 'skydns', not both"))
 	}
 
-	if (skydnsUrl == "") && (skydnsContainerName == "") {
-		skydnsUrl = "http://" + os.Getenv("SKYDNS_PORT_8080_TCP_ADDR") + ":8080"
+	if (params.SkydnsUrl == "") && (params.SkydnsContainerName == "") {
+		params.SkydnsUrl = "http://" + os.Getenv("SKYDNS_PORT_8080_TCP_ADDR") + ":8080"
 	}
 
-	if domain == "" {
+	if params.Domain == "" {
 		fatal(fmt.Errorf("Must specify your skydns domain"))
 	}
 }
@@ -91,20 +97,20 @@ func heartbeat(uuid string) {
 	}()
 
 	var errorCount int
-	for _ = range time.Tick(time.Duration(beat) * time.Second) {
+	for _ = range time.Tick(time.Duration(params.Beat) * time.Second) {
 		if errorCount > 10 {
 			// if we encountered more than 10 errors just quit
 			slog.Printf(slog.ERROR, "aborting heartbeat for %s after 10 errors", uuid)
 			return
 		}
 
-		// don't fill logs if we have a low beat
+		// don't fill logs if we have a low params.Beat
 		// may need to do something better here
-		if beat >= 30 {
-			slog.Printf(slog.INFO, "updating ttl for %s", uuid)
+		if params.Beat >= 30 {
+			slog.Printf(slog.INFO, "updating params.TTL for %s", uuid)
 		}
 
-		if err := updateService(uuid, ttl); err != nil {
+		if err := updateService(uuid, params.TTL); err != nil {
 			errorCount++
 			slog.Printf(slog.ERROR, "%s", err)
 			break
@@ -151,8 +157,8 @@ func sendService(uuid string, service *msg.Service) error {
 		if err != client.ErrConflictingUUID {
 			return err
 		}
-		slog.Printf(slog.INFO, "service already exists for %s. Resetting ttl.", uuid)
-		updateService(uuid, ttl)
+		slog.Printf(slog.INFO, "service already exists for %s. Resetting params.TTL.", uuid)
+		updateService(uuid, params.TTL)
 	}
 	go heartbeat(uuid)
 	return nil
@@ -226,29 +232,29 @@ func main() {
 		group = &sync.WaitGroup{}
 	)
 
-	plugins, err = newRuntime(pluginFile)
+	plugins, err = newRuntime(params.PluginFile)
 	if err != nil {
 		fatal(err)
 	}
 
-	if dockerClient, err = docker.NewClient(pathToSocket); err != nil {
+	if dockerClient, err = docker.NewClient(params.PathToSocket); err != nil {
 		slog.Printf(slog.FATAL, "error connecting to docker: %s", err)
 		fatal(err)
 	}
 
-	if skydnsContainerName != "" {
-		container, err := dockerClient.FetchContainer(skydnsContainerName, "")
+	if params.SkydnsContainerName != "" {
+		container, err := dockerClient.FetchContainer(params.SkydnsContainerName, "")
 		if err != nil {
-			slog.Printf(slog.FATAL, "error retrieving skydns container '%s': %s", skydnsContainerName, err)
+			slog.Printf(slog.FATAL, "error retrieving skydns container '%s': %s", params.SkydnsContainerName, err)
 			fatal(err)
 		}
 
-		skydnsUrl = "http://" + container.NetworkSettings.IpAddress + ":8080"
+		params.SkydnsUrl = "http://" + container.NetworkSettings.IpAddress + ":8080"
 	}
 
-	slog.Printf(slog.INFO, "skydns URL: %s", skydnsUrl)
+	slog.Printf(slog.INFO, "skydns URL: %s", params.SkydnsUrl)
 
-	if skydns, err = client.NewClient(skydnsUrl, secret, domain, "172.17.42.1:53"); err != nil {
+	if skydns, err = client.NewClient(params.SkydnsUrl, params.Secret, params.Domain, "172.17.42.1:53"); err != nil {
 		slog.Printf(slog.FATAL, "error connecting to skydns: %s", err)
 		fatal(err)
 	}
@@ -261,9 +267,9 @@ func main() {
 
 	events := dockerClient.GetEvents()
 
-	group.Add(numberOfHandlers)
+	group.Add(params.NumberOfHandlers)
 	// Start event handlers
-	for i := 0; i < numberOfHandlers; i++ {
+	for i := 0; i < params.NumberOfHandlers; i++ {
 		go eventHandler(events, group)
 	}
 

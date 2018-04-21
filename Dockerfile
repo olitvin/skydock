@@ -10,6 +10,6 @@ RUN go get -u -v github.com/olitvin/skydock
 ADD . /go/src/github.com/olitvin/skydock
 ADD plugins/ /plugins
 
-RUN cd /go/src/github.com/olitvin/skydock && go install . ./...
+RUN cd /go/src/github.com/olitvin/skydock && go install -v . ./...
 
 ENTRYPOINT ["/go/bin/skydock"]

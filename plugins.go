@@ -84,10 +84,10 @@ func newRuntime(file string) (*pluginRuntime, error) {
 }
 
 func loadDefaults(runtime *otto.Otto) error {
-	if err := runtime.Set("defaultTTL", ttl); err != nil {
+	if err := runtime.Set("defaultTTL", params.TTL); err != nil {
 		return err
 	}
-	if err := runtime.Set("defaultEnvironment", environment); err != nil {
+	if err := runtime.Set("defaultEnvironment", params.Environment); err != nil {
 		return err
 	}
 	if err := runtime.Set("cleanImageName", func(call otto.FunctionCall) otto.Value {
