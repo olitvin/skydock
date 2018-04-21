@@ -262,18 +262,16 @@ func main() {
 		params.SkydnsURL = "http://" + container.NetworkSettings.IpAddress + ":8080"
 	}
 
-	log.Printf(log.INFO, "skydns URL: %s", params.SkydnsURL)
-
-	if skydns, err = client.NewClient(params.SkydnsURL, params.Secret, params.Domain, "172.17.42.1:53"); err != nil {
+	if skydns, err = client.NewClient(params.SkydnsURL, params.Secret, params.Domain, "172.0.0.11:53"); err != nil {
 		log.Printf(log.FATAL, "error connecting to skydns: %s", err)
 		fatal(err)
 	}
 
-	log.Printf(log.DEBUG, "starting restore of containers")
+	/*log.Printf(log.DEBUG, "starting restore of containers")
 	if err := restoreContainers(); err != nil {
 		log.Printf(log.FATAL, "error restoring containers: %s", err)
 		fatal(err)
-	}
+	}*/
 
 	events := dockerClient.GetEvents()
 

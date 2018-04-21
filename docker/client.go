@@ -30,19 +30,19 @@ type (
 	}
 
 	ContainerConfig struct {
-		Hostname string
-		Image    string
-		Env      []string
+		Hostname string   `json:"Hostname"`
+		Image    string   `json:"Image"`
+		Env      []string `json:"Env"`
 	}
 
 	Binding struct {
-		HostIp   string
-		HostPort string
+		HostIp   string `json:"HostIp,omitempty"`
+		HostPort string `json:"HostPort,omitempty"`
 	}
 
 	NetworkSettings struct {
-		IpAddress string
-		Ports     map[string][]Binding
+		IpAddress string               `json:"IpAddress,omitempty"`
+		Ports     map[string][]Binding `json:"Ports,omitempty"`
 	}
 
 	// GET /containers/json returns the state of the container, one of:
@@ -52,15 +52,24 @@ type (
 	// - paused;
 	// - exitedor;
 	// - dead;
-	State string
+	State struct {
+		Status     string `json:"Status"`
+		Running    bool   `json:"Running"`
+		Paused     bool   `json:"Paused"`
+		Restarting bool   `json:"Restarting"`
+		Dead       bool   `json:"Dead"`
+		Pid        uint64 `json:"Pid"`
+		ExitCode   uint32 `json:"ExitCode"`
+		Error      string `json:"Error"`
+	}
 
 	Container struct {
-		Id              string
-		Image           string
-		Name            string
-		Config          *ContainerConfig
-		NetworkSettings *NetworkSettings
-		State           State
+		Id              string           `json:"Id"`
+		Image           string           `json:"Image"`
+		Name            string           `json:"Name"`
+		Config          *ContainerConfig `json:"Config"`
+		NetworkSettings *NetworkSettings `json:"NetworkSettings"`
+		State           State            `json:"State"`
 	}
 
 	dockerClient struct {
@@ -102,7 +111,6 @@ func (d *dockerClient) FetchContainer(name, image string) (*Container, error) {
 		return nil, err
 	}
 	defer resp.Body.Close()
-
 	if resp.StatusCode == http.StatusOK {
 		var (
 			container *Container
